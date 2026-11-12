@@ -118,6 +118,18 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                 title: Text('${c['heading']} ${c['label']}'),
                 trailing: Text('${money(c['old_price'])} → ${money(c['new_price'])}'),
               ),
+            if ((p['reshaped'] as List? ?? []).isNotEmpty)
+              Card(
+                color: Theme.of(context).colorScheme.tertiaryContainer,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text([
+                    '${t(ref, 'reshaped')}:',
+                    for (final r in (p['reshaped'] as List))
+                      '• ${r['heading']} ${r['label']}'.trim(),
+                  ].join('\n')),
+                ),
+              ),
             if (answers.isNotEmpty) ...[
               const Divider(),
               Text('${t(ref, 'needs_check')}: ${answers.length}',
