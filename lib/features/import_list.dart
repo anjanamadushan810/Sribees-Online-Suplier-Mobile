@@ -130,6 +130,18 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                   ].join('\n')),
                 ),
               ),
+            if ((p['held'] as List? ?? []).isNotEmpty)
+              Card(
+                color: Theme.of(context).colorScheme.errorContainer,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text([
+                    '${t(ref, 'held_lines')}:',
+                    for (final r in (p['held'] as List))
+                      '• ${r['heading']} ${r['raw']}',
+                  ].join('\n')),
+                ),
+              ),
             if (answers.isNotEmpty) ...[
               const Divider(),
               Text('${t(ref, 'needs_check')}: ${answers.length}',

@@ -195,6 +195,14 @@ class _ProductTile extends ConsumerWidget {
                         ),
                       ),
                     ),
+                    if (o['held_reason'] != null)
+                      Tooltip(
+                        message: t(ref, 'held_${o['held_reason']}'),
+                        triggerMode: TooltipTriggerMode.tap,
+                        child: Icon(Icons.pause_circle_outline,
+                            size: 18, color: Theme.of(context).colorScheme.error),
+                      ),
+                    const SizedBox(width: 8),
                     const Icon(Icons.edit, size: 18),
                     const SizedBox(width: 12),
                   ]),
