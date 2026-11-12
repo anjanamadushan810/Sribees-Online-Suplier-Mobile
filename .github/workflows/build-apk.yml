@@ -1,0 +1,54 @@
+# Build the supplier app APK by hand (PLAN.md decision 12: APK first, Play later).
+# SUPPLY_API_URL is a repository variable (Settings -> Variables), e.g.
+# https://devsupply.sribees.com/api. Signing: until a release keystore is set up
+# (secrets SUPPLIER_KEYSTORE_B64 / _PASSWORD / _ALIAS), the APK is debug-signed.
+name: Build supplier APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.9  # pinned like the Price app (3.50 broke builds)
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - name: Version from pubspec
+        id: v
+        run: echo "version=$(grep '^version:' pubspec.yaml | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
+      - name: Build APK
+        env:
+          SUPPLY_API_URL: ${{ vars.SUPPLY_API_URL }}
+        run: |
+          test -n "$SUPPLY_API_URL" || { echo "set the SUPPLY_API_URL repository variable"; exit 1; }
+          flutter build apk --release \
+            --dart-define=SUPPLY_API_URL="$SUPPLY_API_URL" \
+            --dart-define=APP_VERSION="${{ steps.v.outputs.version }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sribees-supplier-${{ steps.v.outputs.version }}
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
