@@ -1,4 +1,4 @@
-# Build the supplier app APK by hand (PLAN.md decision 12: APK first, Play later).
+# Build the supplier app APK + AAB (Play) by hand (PLAN.md decision 12: APK first, Play later).
 # The API address comes from repository variables (Settings -> Variables):
 # a build of `main` uses SUPPLY_API_URL_PROD (https://supplier.sribeesonline.com/api),
 # any other branch SUPPLY_API_URL (https://devsupply.sribees.com/api). Signing: the release
@@ -83,9 +83,28 @@ jobs:
           flutter build apk --release \
             --dart-define=SUPPLY_API_URL="$SUPPLY_API_URL" \
             --dart-define=APP_VERSION="${{ steps.v.outputs.version }}"
+          flutter build appbundle --release \
+            --dart-define=SUPPLY_API_URL="$SUPPLY_API_URL" \
+            --dart-define=APP_VERSION="${{ steps.v.outputs.version }}"
+      - name: Built version == pubspec (APK and AAB)
+        run: |
+          want="${{ steps.v.outputs.version }}"
+          name="${want%+*}"; code="${want#*+}"
+          aapt2="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt2"
+          badge="$("$aapt2" dump badging build/app/outputs/flutter-apk/app-release.apk | head -1)"
+          echo "$badge"
+          echo "$badge" | grep -q "versionCode='$code' versionName='$name'" || { echo "APK version != pubspec $want"; exit 1; }
+          curl -fsSL -o /tmp/bundletool.jar https://github.com/google/bundletool/releases/download/1.18.1/bundletool-all-1.18.1.jar
+          aab=build/app/outputs/bundle/release/app-release.aab
+          vn="$(java -jar /tmp/bundletool.jar dump manifest --bundle "$aab" --xpath /manifest/@android:versionName)"
+          vc="$(java -jar /tmp/bundletool.jar dump manifest --bundle "$aab" --xpath /manifest/@android:versionCode)"
+          echo "AAB $vn+$vc"
+          [ "$vn+$vc" = "$want" ] || { echo "AAB version != pubspec $want"; exit 1; }
       - uses: actions/upload-artifact@v4
         with:
           name: sribees-supplier-${{ steps.v.outputs.version }}-${{ github.ref_name == 'main' && 'prod' || 'dev' }}
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 30
