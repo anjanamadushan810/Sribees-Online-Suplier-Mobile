@@ -8,6 +8,8 @@ environment:
 
 dependencies:
   dio: 5.7.0
+  firebase_core: 4.14.0
+  firebase_messaging: 16.7.0
   flutter:
     sdk: flutter
   flutter_riverpod: 2.6.1

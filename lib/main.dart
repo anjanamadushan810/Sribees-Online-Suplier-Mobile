@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/push.dart';
 import 'core/state.dart';
 import 'features/catalog.dart';
 import 'features/login.dart';
 import 'features/orders.dart';
 import 'features/settings.dart';
 
-void main() => runApp(const ProviderScope(child: SupplierApp()));
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Push.start();
+  runApp(const ProviderScope(child: SupplierApp()));
+}
 
 class SupplierApp extends ConsumerWidget {
   const SupplierApp({super.key});
@@ -40,6 +45,13 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int tab = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Signed in: make sure this phone gets new-order alerts (asks permission once).
+    Push.register(ref.read(apiProvider));
+  }
 
   @override
   Widget build(BuildContext context) {

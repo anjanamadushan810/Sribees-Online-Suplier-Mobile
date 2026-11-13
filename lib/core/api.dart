@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'push.dart';
 
 /// Sribees Supply API base URL, set at build time:
 ///   flutter build apk --dart-define=SUPPLY_API_URL=https://devsupply.sribees.com/api
@@ -120,6 +122,7 @@ class Api {
   }
 
   Future<void> logout() async {
+    await Push.unregister();
     try {
       await _call(() => dio.post('/supplier/auth/logout'));
     } catch (_) {}
@@ -127,6 +130,9 @@ class Api {
   }
 
   // ---- signed in
+  Future<void> registerDevice(String token) => _call(() => dio.post('/supplier/devices',
+      data: {'token': token, 'platform': defaultTargetPlatform.name}));
+
   Future<Map<String, dynamic>> me() async => await _call(() => dio.get('/supplier/me'));
   Future<Map<String, dynamic>> catalog() async =>
       await _call(() => dio.get('/supplier/catalog'));

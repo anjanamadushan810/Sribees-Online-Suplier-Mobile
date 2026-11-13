@@ -35,6 +35,20 @@ jobs:
           channel: stable
           flutter-version: 3.47.9  # pinned like the Price app (3.50 broke builds)
           cache: true
+      - name: Firebase config
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.SUPPLIER_GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::error::missing secret SUPPLIER_GOOGLE_SERVICES_JSON"; exit 1
+          fi
+          printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          python3 - <<'PY'
+          import json
+          d = json.load(open("android/app/google-services.json"))
+          pkgs = [c["client_info"]["android_client_info"]["package_name"] for c in d["client"]]
+          assert "com.sribeesonline.sribees_supplier" in pkgs, "google-services.json lacks the supplier app"
+          PY
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
