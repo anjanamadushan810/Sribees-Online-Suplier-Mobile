@@ -1,8 +1,10 @@
 # Build the supplier app APK by hand (PLAN.md decision 12: APK first, Play later).
 # The API address comes from repository variables (Settings -> Variables):
 # a build of `main` uses SUPPLY_API_URL_PROD (https://supplier.sribeesonline.com/api),
-# any other branch SUPPLY_API_URL (https://devsupply.sribees.com/api). Signing: until a release keystore is set up
-# (secrets SUPPLIER_KEYSTORE_B64 / _PASSWORD / _ALIAS), the APK is debug-signed.
+# any other branch SUPPLY_API_URL (https://devsupply.sribees.com/api). Signing: the release
+# keystore comes from secrets SUPPLIER_KEYSTORE_B64 / _PASSWORD / _ALIAS. A build of main
+# without them fails (an APK signed by another key cannot update the installed app);
+# other branches fall back to the debug key.
 name: Build supplier APK
 
 on:
@@ -39,6 +41,26 @@ jobs:
       - name: Version from pubspec
         id: v
         run: echo "version=$(grep '^version:' pubspec.yaml | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
+      - name: Release keystore
+        env:
+          KS_B64: ${{ secrets.SUPPLIER_KEYSTORE_B64 }}
+          KS_PASSWORD: ${{ secrets.SUPPLIER_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.SUPPLIER_KEYSTORE_ALIAS }}
+        run: |
+          if [ -z "$KS_B64" ]; then
+            if [ "${{ github.ref_name }}" = "main" ]; then
+              echo "main must be release-signed: set the SUPPLIER_KEYSTORE_* secrets"; exit 1
+            fi
+            echo "no release keystore: this APK is debug-signed"; exit 0
+          fi
+          echo "$KS_B64" | base64 -d > android/upload.jks
+          umask 077
+          {
+            echo "storePassword=$KS_PASSWORD"
+            echo "keyPassword=$KS_PASSWORD"
+            echo "keyAlias=$KS_ALIAS"
+            echo "storeFile=upload.jks"
+          } > android/key.properties
       - name: Build APK
         env:
           SUPPLY_API_URL: ${{ github.ref_name == 'main' && vars.SUPPLY_API_URL_PROD || vars.SUPPLY_API_URL }}
