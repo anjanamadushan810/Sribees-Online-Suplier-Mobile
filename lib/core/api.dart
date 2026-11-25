@@ -121,6 +121,27 @@ class Api {
     await tokens.save(data['access_token'], data['refresh_token']);
   }
 
+  /// Email + password sign-in. Returns true when the password is a temporary one that
+  /// must be changed before anything else.
+  Future<bool> login(String email, String password) async {
+    final data = await _call(() => _plain.post('/supplier/auth/login',
+        data: {'email': email.trim(), 'password': password}));
+    await tokens.save(data['access_token'], data['refresh_token']);
+    return data['must_change_password'] == true;
+  }
+
+  Future<void> changePassword(String current, String next) => _call(() => dio.post(
+      '/supplier/auth/change-password',
+      data: {'current_password': current, 'new_password': next}));
+
+  /// Sends an SMS code to the phone registered for this email (same answer for any email).
+  Future<void> forgotPassword(String email) => _call(() =>
+      _plain.post('/supplier/auth/forgot-password', data: {'email': email.trim()}));
+
+  Future<void> resetPassword(String email, String code, String next) =>
+      _call(() => _plain.post('/supplier/auth/reset-password',
+          data: {'email': email.trim(), 'code': code.trim(), 'new_password': next}));
+
   Future<void> logout() async {
     await Push.unregister();
     try {

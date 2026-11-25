@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/state.dart';
+import 'password.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -15,6 +16,10 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final phone = TextEditingController();
   final code = TextEditingController();
+  final email = TextEditingController();
+  final password = TextEditingController();
+  // Email + password is the normal way in; the SMS code stays as the other way.
+  bool smsMode = false, hidePassword = true;
   bool codeStep = false, busy = false;
   int wait = 0;
   Timer? timer;
@@ -25,6 +30,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     timer?.cancel();
     phone.dispose();
     code.dispose();
+    email.dispose();
+    password.dispose();
     super.dispose();
   }
 
@@ -49,6 +56,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _countdown();
     } catch (e) {
       setState(() => error = errorText(ref, e));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> _signInWithPassword() async {
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      final mustChange =
+          await ref.read(apiProvider).login(email.text.trim(), password.text);
+      ref.read(sessionProvider.notifier).signedIn(mustChange: mustChange);
+    } catch (e) {
+      if (mounted) setState(() => error = errorText(ref, e));
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -89,27 +112,50 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         children: [
           const Icon(Icons.storefront, size: 72),
           const SizedBox(height: 24),
-          TextField(
-            controller: phone,
-            enabled: !codeStep,
-            keyboardType: TextInputType.phone,
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9+ ]'))],
-            decoration: InputDecoration(
-                labelText: t(ref, 'phone'), hintText: t(ref, 'phone_hint')),
-          ),
-          if (codeStep) ...[
-            const SizedBox(height: 12),
-            Text(t(ref, 'code_sent')),
+          if (!smsMode) ...[
+            TextField(
+              controller: email,
+              keyboardType: TextInputType.emailAddress,
+              autofillHints: const [AutofillHints.username, AutofillHints.email],
+              decoration: InputDecoration(labelText: t(ref, 'email')),
+            ),
             const SizedBox(height: 12),
             TextField(
-              controller: code,
-              autofocus: true,
-              keyboardType: TextInputType.number,
-              maxLength: 6,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration:
-                  InputDecoration(labelText: t(ref, 'code'), hintText: t(ref, 'code_hint')),
+              controller: password,
+              obscureText: hidePassword,
+              autofillHints: const [AutofillHints.password],
+              onSubmitted: (_) => busy ? null : _signInWithPassword(),
+              decoration: InputDecoration(
+                labelText: t(ref, 'password'),
+                suffixIcon: IconButton(
+                  icon: Icon(hidePassword ? Icons.visibility : Icons.visibility_off),
+                  onPressed: () => setState(() => hidePassword = !hidePassword),
+                ),
+              ),
             ),
+          ] else ...[
+            TextField(
+              controller: phone,
+              enabled: !codeStep,
+              keyboardType: TextInputType.phone,
+              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9+ ]'))],
+              decoration: InputDecoration(
+                  labelText: t(ref, 'phone'), hintText: t(ref, 'phone_hint')),
+            ),
+            if (codeStep) ...[
+              const SizedBox(height: 12),
+              Text(t(ref, 'code_sent')),
+              const SizedBox(height: 12),
+              TextField(
+                controller: code,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration:
+                    InputDecoration(labelText: t(ref, 'code'), hintText: t(ref, 'code_hint')),
+              ),
+            ],
           ],
           if (error != null)
             Padding(
@@ -118,10 +164,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           const SizedBox(height: 16),
           FilledButton(
-            onPressed: busy ? null : (codeStep ? _verify : _send),
-            child: Text(t(ref, codeStep ? 'sign_in' : 'send_code')),
+            onPressed: busy
+                ? null
+                : (smsMode ? (codeStep ? _verify : _send) : _signInWithPassword),
+            child: Text(t(ref, smsMode && !codeStep ? 'send_code' : 'sign_in')),
           ),
-          if (codeStep)
+          if (!smsMode)
+            TextButton(
+              onPressed: busy
+                  ? null
+                  : () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => ForgotPasswordScreen(email: email.text.trim()))),
+              child: Text(t(ref, 'forgot_password')),
+            ),
+          TextButton(
+            onPressed: busy
+                ? null
+                : () => setState(() {
+                      smsMode = !smsMode;
+                      codeStep = false;
+                      error = null;
+                      code.clear();
+                    }),
+            child: Text(t(ref, smsMode ? 'use_password' : 'use_sms')),
+          ),
+          if (smsMode && codeStep)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

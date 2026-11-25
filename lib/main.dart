@@ -6,6 +6,7 @@ import 'core/state.dart';
 import 'features/catalog.dart';
 import 'features/login.dart';
 import 'features/orders.dart';
+import 'features/password.dart';
 import 'features/settings.dart';
 
 Future<void> main() async {
@@ -31,7 +32,7 @@ class SupplierApp extends ConsumerWidget {
       home: !s.ready
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
           : s.signedIn
-              ? const HomeScreen()
+              ? (s.mustChange ? const ChangePasswordScreen(forced: true) : const HomeScreen())
               : const LoginScreen(),
     );
   }
@@ -51,6 +52,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
     // Signed in: make sure this phone gets new-order alerts (asks permission once).
     Push.register(ref.read(apiProvider));
+    // A temporary password from an earlier sign-in still has to be replaced.
+    ref.read(apiProvider).me().then((m) {
+      if (m['must_change_password'] == true && mounted) {
+        ref.read(sessionProvider.notifier).requireChange();
+      }
+    }).catchError((_) {});
   }
 
   @override

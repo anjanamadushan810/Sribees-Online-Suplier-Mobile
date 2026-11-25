@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/state.dart';
+import 'password.dart';
 
 const appVersion = String.fromEnvironment('APP_VERSION', defaultValue: '0.1.0+1');
 
@@ -19,7 +20,8 @@ class SettingsScreen extends ConsumerWidget {
           data: (m) => ListTile(
             leading: const Icon(Icons.storefront),
             title: Text('${m['supplier_name']}'),
-            subtitle: Text('${m['full_name']} · ${m['phone']}'),
+            subtitle: Text(
+                '${m['full_name']} · ${m['email'] ?? m['phone']}'),
           ),
           orElse: () => const SizedBox.shrink(),
         ),
@@ -40,6 +42,12 @@ class SettingsScreen extends ConsumerWidget {
           title: Text('${t(ref, 'message_header')} / ${t(ref, 'message_footer')}'),
           onTap: () => Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => const TemplateScreen())),
+        ),
+        ListTile(
+          leading: const Icon(Icons.lock_outline),
+          title: Text(t(ref, 'change_password')),
+          onTap: () => Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const ChangePasswordScreen())),
         ),
         ListTile(
           leading: const Icon(Icons.logout),
