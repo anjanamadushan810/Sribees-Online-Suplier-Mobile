@@ -100,11 +100,17 @@ jobs:
           vc="$(java -jar /tmp/bundletool.jar dump manifest --bundle "$aab" --xpath /manifest/@android:versionCode)"
           echo "AAB $vn+$vc"
           [ "$vn+$vc" = "$want" ] || { echo "AAB version != pubspec $want"; exit 1; }
+      # Two separate downloads: the APK (install on a phone) and the AAB (Play Store only).
+      # `archive: false` is not available, so each file is its own artifact (a zip each).
       - uses: actions/upload-artifact@v4
         with:
-          name: sribees-supplier-${{ steps.v.outputs.version }}-${{ github.ref_name == 'main' && 'prod' || 'dev' }}
-          path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/bundle/release/app-release.aab
+          name: sribees-supplier-${{ steps.v.outputs.version }}-${{ github.ref_name == 'main' && 'prod' || 'dev' }}-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sribees-supplier-${{ steps.v.outputs.version }}-${{ github.ref_name == 'main' && 'prod' || 'dev' }}-AAB-for-Play
+          path: build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 30
