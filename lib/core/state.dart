@@ -6,14 +6,19 @@ import 'api.dart';
 import 'strings.dart';
 
 class Session {
-  const Session({this.ready = false, this.signedIn = false, this.lang = 'si'});
+  const Session(
+      {this.ready = false, this.signedIn = false, this.lang = 'si', this.mustChange = false});
   final bool ready;
   final bool signedIn;
   final String lang;
-  Session copy({bool? ready, bool? signedIn, String? lang}) => Session(
+
+  /// Signed in with a temporary password: the app asks for a new one before anything else.
+  final bool mustChange;
+  Session copy({bool? ready, bool? signedIn, String? lang, bool? mustChange}) => Session(
       ready: ready ?? this.ready,
       signedIn: signedIn ?? this.signedIn,
-      lang: lang ?? this.lang);
+      lang: lang ?? this.lang,
+      mustChange: mustChange ?? this.mustChange);
 }
 
 class SessionNotifier extends StateNotifier<Session> {
@@ -28,8 +33,11 @@ class SessionNotifier extends StateNotifier<Session> {
     state = Session(ready: true, signedIn: refresh != null, lang: lang);
   }
 
-  void signedIn() => state = state.copy(signedIn: true);
-  void signedOut() => state = state.copy(signedIn: false);
+  void signedIn({bool mustChange = false}) =>
+      state = state.copy(signedIn: true, mustChange: mustChange);
+  void signedOut() => state = state.copy(signedIn: false, mustChange: false);
+  void requireChange() => state = state.copy(mustChange: true);
+  void passwordChanged() => state = state.copy(mustChange: false);
   Future<void> setLanguage(String lang) async {
     await tokens.setLanguage(lang);
     state = state.copy(lang: lang);
