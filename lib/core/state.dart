@@ -57,6 +57,19 @@ final ordersProvider =
 final meProvider =
     FutureProvider.autoDispose<Map<String, dynamic>>((ref) => ref.watch(apiProvider).me());
 
+/// Partner mode: a fulfilment partner packs customer orders instead of taking our orders.
+final isPartnerProvider = FutureProvider<bool>((ref) async {
+  final me = await ref.watch(apiProvider).me();
+  return me['kind'] == 'fulfilment_partner';
+});
+final partnerRequestsProvider = FutureProvider.autoDispose.family<List<dynamic>, bool>(
+    (ref, openOnly) => ref.watch(apiProvider).partnerRequests(openOnly: openOnly));
+final partnerReturnsProvider = FutureProvider.autoDispose
+    .family<List<dynamic>, bool>((ref, openOnly) =>
+        ref.watch(apiProvider).partnerReturns(openOnly: openOnly));
+final partnerWeeksProvider = FutureProvider.autoDispose<Map<String, dynamic>>(
+    (ref) => ref.watch(apiProvider).partnerStatements());
+
 /// Text in the user's language: `t(ref, 'save')`.
 String t(WidgetRef ref, String key) => tr(ref.watch(sessionProvider).lang, key);
 

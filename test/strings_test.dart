@@ -16,6 +16,19 @@ void main() {
     }
   });
 
+  test('partner statuses and return reasons have text in both languages', () {
+    // the backend's values (fulfilment_requests.status, partner_returns.status / reason)
+    for (final s in ['new', 'seen', 'ready', 'handed', 'cancelled']) {
+      expect(si.containsKey('pst_$s') && en.containsKey('pst_$s'), isTrue, reason: s);
+    }
+    for (final s in ['waiting', 'sent', 'accepted']) {
+      expect(si.containsKey('rst_$s'), isTrue, reason: s);
+    }
+    for (final s in ['cancelled', 'rto', 'undelivered', 'returned']) {
+      expect(si.containsKey('why_$s'), isTrue, reason: s);
+    }
+  });
+
   test('money format', () {
     expect(money('125.00'), '125.00');
     expect(money('37500'), '37,500.00');

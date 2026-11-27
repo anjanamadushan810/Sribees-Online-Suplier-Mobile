@@ -182,6 +182,45 @@ class Api {
   Future<List<dynamic>> orders() async => await _call(() => dio.get('/supplier/orders'));
   Future<Map<String, dynamic>> order(String id) async =>
       await _call(() => dio.get('/supplier/orders/$id'));
+  // ---- fulfilment partner (plan fulfilment-partner-2026-11-27): customer orders to pack,
+  // our product list with the partner's price and stock, returns, weekly statements
+  Future<List<dynamic>> partnerRequests({bool openOnly = true}) async => await _call(() =>
+      dio.get('/supplier/partner/requests', queryParameters: {'open_only': openOnly}));
+  Future<Map<String, dynamic>> partnerRequest(String id) async =>
+      await _call(() => dio.get('/supplier/partner/requests/$id'));
+  Future<Map<String, dynamic>> partnerReady(String id) async =>
+      await _call(() => dio.post('/supplier/partner/requests/$id/ready'));
+  Future<Map<String, dynamic>> partnerItems({String? q, int offset = 0}) async =>
+      await _call(() => dio.get('/supplier/partner/items', queryParameters: {
+            if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
+            'limit': 50,
+            'offset': offset,
+          }));
+  Future<Map<String, dynamic>> partnerSetItem(String branchId, String variantId,
+          {String? priceToUs, int? stock}) async =>
+      await _call(() => dio.put('/supplier/partner/items', data: {
+            'branch_id': branchId,
+            'online_variant_id': variantId,
+            'price_to_us': ?priceToUs,
+            'stock_qty': ?stock,
+          }));
+  Future<Map<String, dynamic>> partnerSetCustomerPrice(
+          String branchId, String variantId, String price) async =>
+      await _call(() => dio.put('/supplier/partner/items/customer-price', data: {
+            'branch_id': branchId,
+            'online_variant_id': variantId,
+            'price': price,
+          }));
+  Future<List<dynamic>> partnerReturns({bool openOnly = true}) async => await _call(() =>
+      dio.get('/supplier/partner/returns', queryParameters: {'open_only': openOnly}));
+  Future<Map<String, dynamic>> partnerAcceptReturn(String id) async =>
+      await _call(() => dio.post('/supplier/partner/returns/$id/accept'));
+  Future<Map<String, dynamic>> partnerStatements({String? week}) async => await _call(() =>
+      dio.get('/supplier/partner/statements',
+          queryParameters: {'week': ?week}));
+  Future<Map<String, dynamic>> partnerConfirmWeek(String week) async =>
+      await _call(() => dio.post('/supplier/partner/statements/$week/confirm'));
+
   Future<void> answer(String id, {required bool accept, String? delivery, String? note}) =>
       _call(() => dio.post('/supplier/orders/$id/answer', data: {
             'accept': accept,
